@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "modern-word2vec"
+version = "0.1.0"
+description = "Modern Word2Vec (Skip-gram/CBOW) implementation with PyTorch best practices and benchmarking CLI."
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Hunter Heidenreich"},
+]
+requires-python = ">=3.10"
+dependencies = [
+    "datasets>=4.0.0",
+    "numpy<2; sys_platform == 'darwin'",
+    "numpy; sys_platform != 'darwin'",
+    "torch>=2.0,<2.2; sys_platform == 'darwin'",
+    "torch>=2.0; sys_platform != 'darwin'",
+    "tqdm>=4.67.1",
+]
+
+[project.scripts]
+word2vec-train = "modern_word2vec.cli.train:main"
+word2vec-query = "modern_word2vec.cli.query:main"
