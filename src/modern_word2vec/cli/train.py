@@ -131,7 +131,13 @@ def create_dataloader(dataset: Word2VecDataset, args) -> DataLoader:
     )
 
 
-def create_model(model_type: str, vocab_size: int, embedding_dim: int, output_layer_type: str = "full_softmax", dataset=None):
+def create_model(
+    model_type: str,
+    vocab_size: int,
+    embedding_dim: int,
+    output_layer_type: str = "full_softmax",
+    dataset=None,
+):
     """Create Word2Vec model based on type.
 
     Args:
@@ -204,7 +210,13 @@ def main(argv: Optional[List[str]] = None) -> None:
     dataloader = create_dataloader(dataset, args)
 
     # Create and configure model
-    model = create_model(args.model_type, dataset.vocab_size, args.embedding_dim, args.output_layer, dataset)
+    model = create_model(
+        args.model_type,
+        dataset.vocab_size,
+        args.embedding_dim,
+        args.output_layer,
+        dataset,
+    )
 
     # Train model
     trainer = Trainer(model, device, train_config)

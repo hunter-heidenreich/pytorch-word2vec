@@ -90,11 +90,11 @@ def create_standard_dataloader(args, raw_texts: List[str]) -> DataLoader:
 
 def create_streaming_components(args, text_source):
     """Create streaming dataset and dataloader.
-    
+
     For true streaming datasets, this requires either:
     1. A pre-built vocabulary file (recommended for large datasets)
     2. A repeatable text source (files, lists, HF dataset names)
-    
+
     Note: For very large datasets, consider building vocabulary offline first.
     """
     if not STREAMING_AVAILABLE:
@@ -123,8 +123,8 @@ def create_streaming_components(args, text_source):
     )
 
     # Check if user provided a pre-built vocabulary
-    vocab_file = getattr(args, 'vocab_file', None)
-    
+    vocab_file = getattr(args, "vocab_file", None)
+
     if vocab_file:
         print(f"Loading pre-built vocabulary from {vocab_file}")
         vocab = load_vocabulary(vocab_file)
@@ -155,7 +155,7 @@ For large streaming datasets, consider:
 """)
             vocab = build_vocabulary_from_stream(text_source, streaming_config)
             training_source = []  # Empty - iterator was consumed
-    
+
     # Create the streaming dataset
     streaming_dataset = StreamingWord2VecDataset(
         training_source, vocab, streaming_config, rng=random.Random(args.seed)
@@ -185,7 +185,9 @@ For large streaming datasets, consider:
                         padded_inputs.append(inp)
                 return torch.stack(padded_inputs), torch.stack(targets)
             else:
-                return torch.empty(0, dtype=torch.long), torch.empty(0, dtype=torch.long)
+                return torch.empty(0, dtype=torch.long), torch.empty(
+                    0, dtype=torch.long
+                )
         else:
             inputs, targets = zip(*batch)
             return torch.stack(inputs), torch.stack(targets)

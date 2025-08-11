@@ -15,7 +15,11 @@ from modern_word2vec.vocabulary import VocabularyBuilder
 from modern_word2vec.pairs import PairGenerator
 
 # Hierarchical Softmax
-from modern_word2vec.hierarchical_softmax import HierarchicalSoftmax, HuffmanTree, build_word_counts_from_dataset
+from modern_word2vec.hierarchical_softmax import (
+    HierarchicalSoftmax,
+    HuffmanTree,
+    build_word_counts_from_dataset,
+)
 
 # Training
 from modern_word2vec.training import Trainer

@@ -100,7 +100,7 @@ def cbow_collate(
     """
     inputs = []
     targets = []
-    
+
     for item in batch:
         inp, tgt = item
         # Ensure inputs are 1D tensors
@@ -108,10 +108,10 @@ def cbow_collate(
             inp = inp.unsqueeze(0)
         inputs.append(inp)
         targets.append(tgt)
-    
+
     # Find maximum context length in this batch
     max_len = max(inp.size(0) for inp in inputs)
-    
+
     # Pad all inputs to the same length
     padded_inputs = []
     for inp in inputs:
@@ -122,7 +122,7 @@ def cbow_collate(
         else:
             padded_inp = inp
         padded_inputs.append(padded_inp)
-    
+
     return torch.stack(padded_inputs), torch.stack(targets)
 
 

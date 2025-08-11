@@ -5,14 +5,22 @@ from typing import Dict, Optional
 import torch
 import torch.nn as nn
 
-from modern_word2vec.hierarchical_softmax import HierarchicalSoftmax, build_word_counts_from_dataset
+from modern_word2vec.hierarchical_softmax import (
+    HierarchicalSoftmax,
+    build_word_counts_from_dataset,
+)
 
 
 class Word2VecBase(nn.Module):
     """Base class for Word2Vec models with shared initialization logic."""
 
-    def __init__(self, vocab_size: int, embedding_dim: int, output_layer_type: str = "full_softmax",
-                 dataset=None):
+    def __init__(
+        self,
+        vocab_size: int,
+        embedding_dim: int,
+        output_layer_type: str = "full_softmax",
+        dataset=None,
+    ):
         """Initialize base Word2Vec model.
 
         Args:
@@ -27,12 +35,14 @@ class Word2VecBase(nn.Module):
         self.output_layer_type = output_layer_type
 
         self.in_embeddings = nn.Embedding(vocab_size, embedding_dim)
-        
+
         # Create appropriate output layer
         if output_layer_type == "hierarchical_softmax":
             if dataset is None:
-                raise ValueError("Dataset is required for hierarchical softmax to build Huffman tree")
-            
+                raise ValueError(
+                    "Dataset is required for hierarchical softmax to build Huffman tree"
+                )
+
             word_counts = build_word_counts_from_dataset(dataset)
             self.hierarchical_softmax = HierarchicalSoftmax(
                 embedding_dim, vocab_size, word_counts, dataset.word_to_idx
@@ -69,11 +79,15 @@ class Word2VecBase(nn.Module):
             Tensor of shape (batch, vocab_size) containing scores for all words
         """
         if self.output_layer_type == "hierarchical_softmax":
-            raise ValueError("Cannot compute full scores with hierarchical softmax. Use compute_loss instead.")
-        
+            raise ValueError(
+                "Cannot compute full scores with hierarchical softmax. Use compute_loss instead."
+            )
+
         return torch.matmul(input_embeddings, self.out_embeddings.weight.t())
-    
-    def compute_loss(self, input_embeddings: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+
+    def compute_loss(
+        self, input_embeddings: torch.Tensor, targets: torch.Tensor
+    ) -> torch.Tensor:
         """Compute loss using the appropriate output layer.
 
         Args:
@@ -97,8 +111,13 @@ class SkipGramModel(Word2VecBase):
     In skip-gram, we predict context words given a center word.
     """
 
-    def __init__(self, vocab_size: int, embedding_dim: int, output_layer_type: str = "full_softmax",
-                 dataset=None):
+    def __init__(
+        self,
+        vocab_size: int,
+        embedding_dim: int,
+        output_layer_type: str = "full_softmax",
+        dataset=None,
+    ):
         """Initialize Skip-gram model.
 
         Args:
@@ -109,7 +128,9 @@ class SkipGramModel(Word2VecBase):
         """
         super().__init__(vocab_size, embedding_dim, output_layer_type, dataset)
 
-    def forward(self, target_word: torch.Tensor, context_targets: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def forward(
+        self, target_word: torch.Tensor, context_targets: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         """Forward pass.
 
         Args:
@@ -122,10 +143,12 @@ class SkipGramModel(Word2VecBase):
         """
         # target_word: (batch,)
         in_embeds = self.in_embeddings(target_word)  # (batch, D)
-        
+
         if self.output_layer_type == "hierarchical_softmax":
             if context_targets is None:
-                raise ValueError("context_targets required for hierarchical softmax forward pass")
+                raise ValueError(
+                    "context_targets required for hierarchical softmax forward pass"
+                )
             return self.compute_loss(in_embeds, context_targets)
         else:
             return self._compute_scores(in_embeds)
@@ -137,8 +160,13 @@ class CBOWModel(Word2VecBase):
     In CBOW, we predict a center word given its context words.
     """
 
-    def __init__(self, vocab_size: int, embedding_dim: int, output_layer_type: str = "full_softmax",
-                 dataset=None):
+    def __init__(
+        self,
+        vocab_size: int,
+        embedding_dim: int,
+        output_layer_type: str = "full_softmax",
+        dataset=None,
+    ):
         """Initialize CBOW model.
 
         Args:
@@ -149,7 +177,9 @@ class CBOWModel(Word2VecBase):
         """
         super().__init__(vocab_size, embedding_dim, output_layer_type, dataset)
 
-    def forward(self, context_words: torch.Tensor, center_targets: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def forward(
+        self, context_words: torch.Tensor, center_targets: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         """Forward pass.
 
         Args:
@@ -163,10 +193,12 @@ class CBOWModel(Word2VecBase):
         # context_words: (batch, 2*window)
         in_embeds = self.in_embeddings(context_words)  # (batch, 2W, D)
         context_vector = torch.mean(in_embeds, dim=1)  # (batch, D)
-        
+
         if self.output_layer_type == "hierarchical_softmax":
             if center_targets is None:
-                raise ValueError("center_targets required for hierarchical softmax forward pass")
+                raise ValueError(
+                    "center_targets required for hierarchical softmax forward pass"
+                )
             return self.compute_loss(context_vector, center_targets)
         else:
             return self._compute_scores(context_vector)
