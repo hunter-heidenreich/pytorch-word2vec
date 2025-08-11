@@ -175,12 +175,12 @@ class TestHierarchicalSoftmaxIntegration:
         probs_method1 = hsoftmax.predict_probabilities(input_embeddings)
 
         # Method 2: Compute probabilities manually using forward passes
-        probs_method2 = torch.zeros_like(probs_method1)
+        _ = torch.zeros_like(probs_method1)
 
         for word_idx in range(len(word_to_idx)):
             target_words = torch.full((2,), word_idx)
             # Use negative log likelihood to get log probabilities
-            neg_log_prob = hsoftmax(input_embeddings, target_words)
+            _ = hsoftmax(input_embeddings, target_words)
             # This gives us the average negative log probability
             # We can't easily extract individual probabilities this way,
             # so we'll skip this comparison and just verify the first method works
@@ -227,7 +227,7 @@ class TestPerformanceBenchmarks:
         start_time = time.time()
 
         for _ in range(num_iterations):
-            loss = hsoftmax(input_embeddings, target_words)
+            _ = hsoftmax(input_embeddings, target_words)
 
         end_time = time.time()
         avg_time = (end_time - start_time) / num_iterations

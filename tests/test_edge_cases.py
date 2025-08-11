@@ -160,7 +160,7 @@ class TestHierarchicalSoftmaxEdgeCases:
 
         # This should raise an error or handle gracefully
         with pytest.raises((IndexError, RuntimeError)):
-            loss = hsoftmax(input_embeddings, target_words)
+            hsoftmax(input_embeddings, target_words)
 
     def test_empty_paths_handling(self):
         """Test handling when some words have empty paths (single word case)."""

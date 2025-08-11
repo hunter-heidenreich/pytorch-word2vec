@@ -1,6 +1,6 @@
 """Model definitions for Word2Vec."""
 
-from typing import Dict, Optional
+from typing import Optional
 
 import torch
 import torch.nn as nn
