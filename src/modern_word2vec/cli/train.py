@@ -70,6 +70,12 @@ def create_train_config(args) -> TrainConfig:
         num_workers=args.workers,
         pin_memory=args.pin_memory,
         seed=args.seed,
+        tensorboard=args.tensorboard,
+        tensorboard_dir=args.tensorboard_dir,
+        log_gradients=args.log_gradients,
+        log_weights=args.log_weights,
+        log_system_stats=args.log_system_stats,
+        log_interval=args.log_interval,
     )
 
 

@@ -11,6 +11,12 @@ import torch.nn as nn
 
 from modern_word2vec.config import DeviceType
 
+# Import TensorBoard logger if available
+try:
+    from .tensorboard_logger import TensorBoardLogger
+except ImportError:
+    TensorBoardLogger = None
+
 
 def set_seed(seed: int) -> None:
     """Set random seeds for reproducibility.

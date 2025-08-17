@@ -33,6 +33,7 @@ from modern_word2vec.utils import (
     load_vocab_and_embeddings,
     find_similar,
     compute_cosine_similarities,
+    TensorBoardLogger,
 )
 
 __all__ = [
@@ -63,4 +64,5 @@ __all__ = [
     "load_vocab_and_embeddings",
     "find_similar",
     "compute_cosine_similarities",
+    "TensorBoardLogger",
 ]

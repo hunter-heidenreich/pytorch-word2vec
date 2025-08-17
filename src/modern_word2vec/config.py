@@ -56,6 +56,13 @@ class TrainConfig:
     num_workers: int = 0
     pin_memory: bool = False
     seed: int = DEFAULT_SEED
+    # TensorBoard logging options
+    tensorboard: bool = False
+    tensorboard_dir: str = "runs/tensorboard"
+    log_gradients: bool = False
+    log_weights: bool = False
+    log_system_stats: bool = False
+    log_interval: int = 100  # Log every N steps
 
 
 @dataclass

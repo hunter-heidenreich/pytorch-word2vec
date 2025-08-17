@@ -12,17 +12,11 @@ from modern_word2vec.tokenization import Tokenizer
 from modern_word2vec.vocabulary import VocabularyBuilder
 from modern_word2vec.pairs import PairGenerator, create_pair_tensors
 
-# Import streaming functionality
-try:
-    from modern_word2vec.data.streaming import (
-        StreamingWord2VecDataset,
-        StreamingDataConfig,
-        create_streaming_dataloader,
-    )
-
-    STREAMING_AVAILABLE = True
-except ImportError:
-    STREAMING_AVAILABLE = False
+from modern_word2vec.data.streaming import (
+    StreamingWord2VecDataset,
+    StreamingDataConfig,
+    create_streaming_dataloader,
+)
 
 
 class Word2VecDataset(Dataset):

@@ -198,6 +198,17 @@ class TestSetupDeviceOptimizations:
         mock_precision.side_effect = Exception("Test exception")
         setup_device_optimizations(device)
 
+    def test_get_device_unrecognized_device_type(self):
+        """Test fallback behavior for unrecognized device types."""
+        # Test the fallback return path (line 59 in utils)
+        with (
+            patch("torch.cuda.is_available", return_value=False),
+            patch("torch.backends.mps.is_available", return_value=False),
+        ):
+            # Should fall back to CPU for any unrecognized preference
+            device = get_device(prefer="unknown_device")
+            assert device.type == "cpu"
+
 
 class TestExportEmbeddings:
     """Test cases for export_embeddings function."""

@@ -366,3 +366,80 @@ class TestBuildWordCountsFromDataset:
         assert extracted_counts["banana"] == 30
         for word in ["cherry", "date", "elderberry"]:
             assert extracted_counts[word] == 1
+
+    def test_device_movement_forward(self, small_vocab, small_word_counts):
+        """Test device movement in forward pass."""
+        embedding_dim = 64
+        vocab_size = len(small_vocab)
+
+        hsoftmax = HierarchicalSoftmax(
+            embedding_dim=embedding_dim,
+            vocab_size=vocab_size,
+            word_counts=small_word_counts,
+            word_to_idx=small_vocab,
+        )
+
+        # Create input embeddings on CPU
+        input_embeddings = torch.randn(3, embedding_dim)
+        targets = torch.tensor([0, 1, 2])
+
+        # Move hsoftmax tensors to CPU first (they should be on CPU already)
+        # Then create input on different device concept
+        original_device = hsoftmax.word_path_indices.device
+
+        # Test that forward pass works (device movement code should execute)
+        loss = hsoftmax(input_embeddings, targets)
+        assert isinstance(loss, torch.Tensor)
+        assert loss.requires_grad
+
+        # Verify tensors are still on the same device
+        assert hsoftmax.word_path_indices.device == original_device
+
+    def test_device_movement_compute_probs(self, small_vocab, small_word_counts):
+        """Test device movement in predict_probabilities."""
+        embedding_dim = 64
+        vocab_size = len(small_vocab)
+
+        hsoftmax = HierarchicalSoftmax(
+            embedding_dim=embedding_dim,
+            vocab_size=vocab_size,
+            word_counts=small_word_counts,
+            word_to_idx=small_vocab,
+        )
+
+        # Create input embeddings
+        input_embeddings = torch.randn(2, embedding_dim)
+
+        # Test predict_probabilities (should trigger device movement code)
+        probs = hsoftmax.predict_probabilities(input_embeddings)
+        assert probs.shape == (2, vocab_size)
+        assert torch.allclose(probs.sum(dim=1), torch.ones(2), atol=1e-5)
+
+    def test_empty_valid_paths(self, small_vocab, small_word_counts):
+        """Test handling of empty valid paths (edge case)."""
+        embedding_dim = 64
+        vocab_size = len(small_vocab)
+
+        hsoftmax = HierarchicalSoftmax(
+            embedding_dim=embedding_dim,
+            vocab_size=vocab_size,
+            word_counts=small_word_counts,
+            word_to_idx=small_vocab,
+        )
+
+        # Mock the internal state to create a scenario with no valid paths
+        # This tests the line: if valid_mask.sum() == 0: return torch.tensor(0.0, ...)
+        input_embeddings = torch.randn(1, embedding_dim)
+
+        # Temporarily replace path indices with invalid values
+        original_paths = hsoftmax.word_path_indices.clone()
+        hsoftmax.word_path_indices.fill_(-1)  # All invalid paths
+
+        try:
+            loss = hsoftmax(input_embeddings, torch.tensor([0]))
+            assert isinstance(loss, torch.Tensor)
+            assert loss.item() == 0.0
+            assert loss.requires_grad
+        finally:
+            # Restore original paths
+            hsoftmax.word_path_indices.copy_(original_paths)

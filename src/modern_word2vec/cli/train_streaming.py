@@ -39,16 +39,9 @@ from modern_word2vec.data import (
     load_texts_from_hf,
 )
 
-# Import streaming components if available
-try:
-    from modern_word2vec.data.streaming import (
-        load_streaming_dataset,
-    )
-
-    STREAMING_AVAILABLE = True
-except ImportError:
-    STREAMING_AVAILABLE = False
-    print("Warning: Streaming functionality not available")
+from modern_word2vec.data.streaming import (
+    load_streaming_dataset,
+)
 
 
 def create_standard_dataloader(args, raw_texts: List[str]) -> DataLoader:
@@ -97,11 +90,6 @@ def create_streaming_components(args, text_source):
 
     Note: For very large datasets, consider building vocabulary offline first.
     """
-    if not STREAMING_AVAILABLE:
-        raise RuntimeError(
-            "Streaming functionality not available. Install required dependencies."
-        )
-
     from modern_word2vec.data.streaming import (
         StreamingDataConfig,
         StreamingWord2VecDataset,
@@ -328,11 +316,6 @@ def main(argv: Optional[List[str]] = None) -> None:
     )
 
     args = parser.parse_args(argv)
-
-    # Check streaming availability
-    if args.streaming and not STREAMING_AVAILABLE:
-        print("Error: Streaming mode requested but not available. Using standard mode.")
-        args.streaming = False
 
     # Seed and device
     set_seed(args.seed)

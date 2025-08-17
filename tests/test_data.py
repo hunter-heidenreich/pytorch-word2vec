@@ -13,7 +13,6 @@ from modern_word2vec.data import (
     cbow_collate,
     load_texts_from_hf,
     generate_synthetic_texts,
-    STREAMING_AVAILABLE,
 )
 
 
@@ -423,28 +422,6 @@ class TestGenerateSyntheticTexts:
 
         assert len(texts) == 100
         assert all(isinstance(text, str) for text in texts)
-
-
-class TestStreamingAvailability:
-    """Test cases for streaming availability."""
-
-    def test_streaming_available_flag(self):
-        """Test that streaming availability flag is boolean."""
-        assert isinstance(STREAMING_AVAILABLE, bool)
-
-    @patch("modern_word2vec.data.STREAMING_AVAILABLE", True)
-    def test_streaming_imports_when_available(self):
-        """Test that streaming imports are used when available."""
-        # This tests the import path when streaming is available
-        from modern_word2vec.data import STREAMING_AVAILABLE
-
-        assert STREAMING_AVAILABLE is True
-
-    def test_import_error_handling(self):
-        """Test import error handling for streaming."""
-        # Test that the module still works when streaming is not available
-        # This is already tested by the fact that we can import the module
-        assert True
 
 
 class TestDataIntegration:

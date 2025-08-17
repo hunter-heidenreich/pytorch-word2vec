@@ -202,6 +202,46 @@ class ArgumentParser:
             help="Gradient clipping threshold (0 to disable)",
         )
 
+        # TensorBoard logging options
+        tensorboard_group = parser.add_argument_group("TensorBoard Logging")
+        tensorboard_group.add_argument(
+            "--tensorboard", action="store_true", help="Enable TensorBoard logging"
+        )
+        tensorboard_group.add_argument(
+            "--tensorboard-dir",
+            type=str,
+            default="runs/tensorboard",
+            help="TensorBoard log directory",
+        )
+        tensorboard_group.add_argument(
+            "--log-gradients",
+            action="store_true",
+            help="Log gradient statistics to TensorBoard",
+        )
+        tensorboard_group.add_argument(
+            "--log-weights",
+            action="store_true",
+            help="Log model weights to TensorBoard",
+        )
+        tensorboard_group.add_argument(
+            "--log-system-stats",
+            action="store_true",
+            help="Log system statistics (CPU, memory, GPU) to TensorBoard",
+        )
+        tensorboard_group.add_argument(
+            "--log-interval",
+            type=int,
+            default=100,
+            help="Log metrics every N training steps",
+        )
+
+        # Set default values for when TensorBoard is enabled
+        parser.set_defaults(
+            log_gradients=False,
+            log_weights=False,
+            log_system_stats=False,
+        )
+
     @staticmethod
     def _add_system_args(parser: argparse.ArgumentParser) -> None:
         """Add system and optimization arguments."""

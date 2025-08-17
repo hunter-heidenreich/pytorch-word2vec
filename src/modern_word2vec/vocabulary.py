@@ -37,12 +37,21 @@ class VocabularyBuilder:
         # Count words and build vocabulary
         word_counts = Counter(tokens)
         self.word_counts = word_counts  # Store for later use
-        vocab_words = [word for word, _ in word_counts.most_common(self.vocab_size - 1)]
+        
+        if self.vocab_size > 0:
+            # Limited vocabulary size - take most common words
+            vocab_words = [word for word, _ in word_counts.most_common(self.vocab_size - 1)]
+        else:
+            # Unlimited vocabulary size - but filter out words with frequency < 2 to avoid training issues
+            vocab_words = [word for word, count in word_counts.items() if count >= 2]
+            # Sort by frequency (most common first) for consistency
+            vocab_words.sort(key=lambda word: word_counts[word], reverse=True)
 
         # Create mappings
         word_to_idx = {word: idx for idx, word in enumerate(vocab_words)}
         word_to_idx[SPECIAL_TOKENS["UNK"]] = len(vocab_words)
         idx_to_word = {idx: word for word, idx in word_to_idx.items()}
+        self.vocab_size = len(word_to_idx)
 
         # Apply subsampling if enabled
         filtered_tokens = (

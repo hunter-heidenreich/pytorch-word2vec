@@ -1,7 +1,7 @@
 """Training utilities and trainer class."""
 
 import time
-from typing import Dict
+from typing import Dict, Optional
 
 import torch
 import torch.nn as nn
@@ -41,6 +41,43 @@ class Trainer:
 
         # Set up learning rate scheduler for linear decay (Word2Vec paper requirement)
         self.scheduler = None
+
+        # Initialize TensorBoard logger if enabled
+        self.tb_logger = None
+        if config.tensorboard:
+            try:
+                from modern_word2vec.utils.tensorboard_logger import TensorBoardLogger
+                
+                # Create experiment name from config
+                experiment_name = f"{model.__class__.__name__}_{config.optimizer}_lr{config.learning_rate}_bs{config.batch_size}"
+                
+                self.tb_logger = TensorBoardLogger(
+                    log_dir=config.tensorboard_dir,
+                    log_gradients=config.log_gradients,
+                    log_weights=config.log_weights,
+                    log_system_stats=config.log_system_stats,
+                    experiment_name=experiment_name,
+                )
+                
+                # Log hyperparameters
+                hparams = {
+                    "model_type": model.__class__.__name__,
+                    "embedding_dim": config.embedding_dim,
+                    "batch_size": config.batch_size,
+                    "learning_rate": config.learning_rate,
+                    "optimizer": config.optimizer,
+                    "epochs": config.epochs,
+                    "weight_decay": config.weight_decay,
+                    "grad_clip": config.grad_clip,
+                    "mixed_precision": config.mixed_precision,
+                }
+                
+                # We'll log final metrics at the end of training
+                self.tb_logger.log_hyperparameters(hparams, {"final_loss": 0.0})
+                
+            except ImportError:
+                print("Warning: TensorBoard dependencies not available. Skipping TensorBoard logging.")
+                self.tb_logger = None
 
         # Apply model compilation if requested and available
         if config.compile and hasattr(torch, "compile"):
@@ -205,6 +242,16 @@ class Trainer:
         total_steps = len(dataloader) * self.config.epochs
         self._setup_scheduler(total_steps)
 
+        # Log model info to TensorBoard if enabled
+        if self.tb_logger is not None:
+            try:
+                # Get a sample batch for model graph logging
+                sample_batch = next(iter(dataloader))
+                sample_input = sample_batch[0][:1].to(self.device)  # Single sample
+                self.tb_logger.log_model_info(self.model, sample_input)
+            except Exception:
+                pass  # Skip if model graph logging fails
+
         steps = 0
         samples = 0
         running_loss = 0.0
@@ -226,6 +273,36 @@ class Trainer:
                 if self.scheduler is not None:
                     self.scheduler.step()
 
+                # TensorBoard logging
+                if self.tb_logger is not None and steps % self.config.log_interval == 0:
+                    current_lr = self.optimizer.param_groups[0]["lr"]
+                    
+                    # Log basic training metrics
+                    self.tb_logger.log_training_metrics(
+                        step=steps,
+                        loss=loss,
+                        learning_rate=current_lr,
+                        batch_size=batch_size,
+                        epoch=epoch,
+                    )
+                    
+                    # Log gradient statistics
+                    self.tb_logger.log_gradient_stats(self.model, steps)
+                    
+                    # Log weight statistics
+                    self.tb_logger.log_weight_stats(self.model, steps)
+                    
+                    # Log system statistics
+                    self.tb_logger.log_system_stats(steps, self.device)
+                    
+                    # # Log embedding analysis (less frequently to save compute)
+                    # if steps % (self.config.log_interval * 10) == 0:
+                    #     try:
+                    #         embeddings = self.model.in_embeddings.weight.detach()
+                    #         self.tb_logger.log_embedding_analysis(embeddings, steps)
+                    #     except Exception:
+                    #         pass  # Skip if embedding analysis fails
+
                 # Update progress bar with current loss and learning rate
                 current_lr = self.optimizer.param_groups[0]["lr"]
                 pbar.set_postfix(
@@ -234,7 +311,8 @@ class Trainer:
 
         total_time = time.perf_counter() - start_time
 
-        return {
+        # Final metrics
+        final_metrics = {
             "avg_loss": running_loss / max(1, steps),
             "steps": steps,
             "samples": samples,
@@ -243,3 +321,30 @@ class Trainer:
             "samples_per_sec": samples / max(total_time, 1e-9),
             "final_lr": self.optimizer.param_groups[0]["lr"],
         }
+
+        # Log final metrics to TensorBoard
+        if self.tb_logger is not None:
+            for key, value in final_metrics.items():
+                self.tb_logger.writer.add_scalar(f"final/{key}", value, steps)
+            
+            # Update hyperparameters with final loss
+            try:
+                hparams = {
+                    "model_type": self.model.__class__.__name__,
+                    "embedding_dim": self.config.embedding_dim,
+                    "batch_size": self.config.batch_size,
+                    "learning_rate": self.config.learning_rate,
+                    "optimizer": self.config.optimizer,
+                    "epochs": self.config.epochs,
+                    "weight_decay": self.config.weight_decay,
+                    "grad_clip": self.config.grad_clip,
+                    "mixed_precision": self.config.mixed_precision,
+                }
+                self.tb_logger.log_hyperparameters(hparams, {"final_loss": final_metrics["avg_loss"]})
+            except Exception:
+                pass  # Skip if hyperparameter logging fails
+            
+            # Close TensorBoard logger
+            self.tb_logger.close()
+
+        return final_metrics
