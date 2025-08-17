@@ -92,16 +92,40 @@ class TestWord2VecBase:
             assert model.out_embeddings is None
             mock_hs.assert_called_once()
 
-    def test_init_hierarchical_softmax_without_dataset(self):
-        """Test Word2VecBase initialization with hierarchical softmax but no dataset."""
+    def test_init_negative_sampling_with_dataset(self):
+        """Test Word2VecBase initialization with negative sampling."""
+        vocab_size = 100
+        embedding_dim = 50
+        num_negative = 10
+        dataset = create_mock_dataset_with_vocab_builder(vocab_size)
+
+        with patch("src.modern_word2vec.models.NegativeSampling") as mock_ns:
+            model = Word2VecBase(
+                vocab_size,
+                embedding_dim,
+                output_layer_type="negative_sampling",
+                dataset=dataset,
+                num_negative=num_negative,
+            )
+
+            assert model.vocab_size == vocab_size
+            assert model.embedding_dim == embedding_dim
+            assert model.output_layer_type == "negative_sampling"
+            assert isinstance(model.in_embeddings, nn.Embedding)
+            assert model.out_embeddings is None
+            assert model.hierarchical_softmax is None
+            mock_ns.assert_called_once()
+
+    def test_init_negative_sampling_without_dataset(self):
+        """Test Word2VecBase initialization with negative sampling but no dataset."""
         vocab_size = 100
         embedding_dim = 50
 
         with pytest.raises(
-            ValueError, match="Dataset is required for hierarchical softmax"
+            ValueError, match="Dataset is required for negative sampling"
         ):
             Word2VecBase(
-                vocab_size, embedding_dim, output_layer_type="hierarchical_softmax"
+                vocab_size, embedding_dim, output_layer_type="negative_sampling"
             )
 
     def test_weight_initialization_full_softmax(self):
@@ -159,26 +183,32 @@ class TestWord2VecBase:
         # Scores should be real numbers
         assert torch.all(torch.isfinite(scores))
 
-    def test_compute_scores_hierarchical_softmax_error(self):
-        """Test that compute_scores raises error for hierarchical softmax."""
+    def test_compute_scores_negative_sampling(self):
+        """Test score computation for negative sampling."""
         vocab_size = 10
         embedding_dim = 5
+        batch_size = 3
         dataset = create_mock_dataset_with_vocab_builder(vocab_size)
 
-        with patch("src.modern_word2vec.models.HierarchicalSoftmax"):
+        with patch("src.modern_word2vec.models.NegativeSampling") as mock_ns:
+            mock_ns_instance = Mock()
+            mock_ns.return_value = mock_ns_instance
+            mock_scores = torch.randn(batch_size, vocab_size)
+            mock_ns_instance.predict_scores.return_value = mock_scores
+
             model = Word2VecBase(
                 vocab_size,
                 embedding_dim,
-                output_layer_type="hierarchical_softmax",
+                output_layer_type="negative_sampling",
                 dataset=dataset,
             )
+            model.negative_sampling = mock_ns_instance
 
-            input_embeddings = torch.randn(3, embedding_dim)
+            input_embeddings = torch.randn(batch_size, embedding_dim)
+            scores = model._compute_scores(input_embeddings)
 
-            with pytest.raises(
-                ValueError, match="Cannot compute full scores with hierarchical softmax"
-            ):
-                model._compute_scores(input_embeddings)
+            assert torch.allclose(scores, mock_scores)
+            mock_ns_instance.predict_scores.assert_called_once_with(input_embeddings)
 
     def test_compute_loss_full_softmax(self):
         """Test loss computation for full softmax."""
@@ -196,23 +226,23 @@ class TestWord2VecBase:
         assert loss.item() >= 0  # Loss should be non-negative
         assert torch.isfinite(loss)
 
-    def test_compute_loss_hierarchical_softmax(self):
-        """Test loss computation for hierarchical softmax."""
+    def test_compute_loss_negative_sampling(self):
+        """Test loss computation for negative sampling."""
         vocab_size = 10
         embedding_dim = 5
         batch_size = 3
         dataset = create_mock_dataset_with_vocab_builder(vocab_size)
 
-        mock_hs = Mock()
-        mock_hs.return_value = torch.tensor(2.5)
+        mock_ns = Mock()
+        mock_ns.return_value = torch.tensor(1.8)
 
         with patch(
-            "src.modern_word2vec.models.HierarchicalSoftmax", return_value=mock_hs
+            "src.modern_word2vec.models.NegativeSampling", return_value=mock_ns
         ):
             model = Word2VecBase(
                 vocab_size,
                 embedding_dim,
-                output_layer_type="hierarchical_softmax",
+                output_layer_type="negative_sampling",
                 dataset=dataset,
             )
 
@@ -221,8 +251,8 @@ class TestWord2VecBase:
 
             loss = model.compute_loss(input_embeddings, targets)
 
-            mock_hs.assert_called_once_with(input_embeddings, targets)
-            assert loss == 2.5
+            mock_ns.assert_called_once_with(input_embeddings, targets)
+            assert loss == 1.8
 
     def test_different_vocab_sizes(self):
         """Test model with different vocabulary sizes."""

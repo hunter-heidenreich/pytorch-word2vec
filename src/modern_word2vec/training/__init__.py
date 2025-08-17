@@ -1,7 +1,7 @@
 """Training utilities and trainer class."""
 
 import time
-from typing import Dict, Optional
+from typing import Dict
 
 import torch
 import torch.nn as nn
@@ -28,10 +28,10 @@ class Trainer:
         self.config = config
 
         # Only create criterion for full softmax models
-        # Hierarchical softmax models compute loss internally
+        # Hierarchical softmax and negative sampling models compute loss internally
         if (
             hasattr(model, "output_layer_type")
-            and model.output_layer_type == "hierarchical_softmax"
+            and model.output_layer_type in ["hierarchical_softmax", "negative_sampling"]
         ):
             self.criterion = None
         else:
@@ -187,12 +187,12 @@ class Trainer:
         Returns:
             Loss tensor
         """
-        # Check if model uses hierarchical softmax
+        # Check if model uses hierarchical softmax or negative sampling
         if (
             hasattr(self.model, "output_layer_type")
-            and self.model.output_layer_type == "hierarchical_softmax"
+            and self.model.output_layer_type in ["hierarchical_softmax", "negative_sampling"]
         ):
-            # For hierarchical softmax, we need to compute input embeddings differently based on model type
+            # For hierarchical softmax and negative sampling, we need to compute input embeddings differently based on model type
             if (
                 hasattr(self.model, "__class__")
                 and "CBOW" in self.model.__class__.__name__

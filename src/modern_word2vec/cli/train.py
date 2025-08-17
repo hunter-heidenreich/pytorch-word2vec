@@ -143,6 +143,7 @@ def create_model(
     embedding_dim: int,
     output_layer_type: str = "full_softmax",
     dataset=None,
+    num_negative: int = 5,
 ):
     """Create Word2Vec model based on type.
 
@@ -150,8 +151,9 @@ def create_model(
         model_type: Type of model ("skipgram" or "cbow")
         vocab_size: Vocabulary size
         embedding_dim: Embedding dimension
-        output_layer_type: Output layer type ("full_softmax" or "hierarchical_softmax")
-        dataset: Dataset instance (required for hierarchical softmax)
+        output_layer_type: Output layer type ("full_softmax", "hierarchical_softmax", or "negative_sampling")
+        dataset: Dataset instance (required for hierarchical softmax and negative sampling)
+        num_negative: Number of negative samples per positive example (for negative sampling)
 
     Returns:
         Word2Vec model instance
@@ -160,9 +162,9 @@ def create_model(
         ValueError: If model type is not supported
     """
     if model_type == "skipgram":
-        return SkipGramModel(vocab_size, embedding_dim, output_layer_type, dataset)
+        return SkipGramModel(vocab_size, embedding_dim, output_layer_type, dataset, num_negative)
     elif model_type == "cbow":
-        return CBOWModel(vocab_size, embedding_dim, output_layer_type, dataset)
+        return CBOWModel(vocab_size, embedding_dim, output_layer_type, dataset, num_negative)
     else:
         raise ValueError(f"Unsupported model type: {model_type}")
 
@@ -222,6 +224,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         args.embedding_dim,
         args.output_layer,
         dataset,
+        args.num_negative,
     )
 
     # Train model

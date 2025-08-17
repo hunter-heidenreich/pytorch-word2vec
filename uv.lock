@@ -665,15 +665,25 @@ source = { editable = "." }
 dependencies = [
     { name = "datasets" },
     { name = "numpy" },
-    { name = "psutil" },
-    { name = "tensorboard" },
     { name = "torch" },
     { name = "tqdm" },
 ]
 
 [package.optional-dependencies]
+all = [
+    { name = "psutil" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "pytest-mock" },
+    { name = "ruff" },
+    { name = "tensorboard" },
+]
 dev = [
     { name = "ruff" },
+]
+tensorboard = [
+    { name = "psutil" },
+    { name = "tensorboard" },
 ]
 test = [
     { name = "pytest" },
@@ -681,22 +691,31 @@ test = [
     { name = "pytest-mock" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "datasets", specifier = ">=4.0.0" },
+    { name = "modern-word2vec", extras = ["tensorboard", "test", "dev"], marker = "extra == 'all'" },
     { name = "numpy", marker = "sys_platform != 'darwin'" },
     { name = "numpy", marker = "sys_platform == 'darwin'", specifier = "<2" },
-    { name = "psutil", specifier = ">=5.8.0" },
+    { name = "psutil", marker = "extra == 'tensorboard'", specifier = ">=5.8.0" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=7.0.0" },
     { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=4.0.0" },
     { name = "pytest-mock", marker = "extra == 'test'", specifier = ">=3.10.0" },
     { name = "ruff", marker = "extra == 'dev'" },
-    { name = "tensorboard", specifier = ">=2.10.0" },
+    { name = "tensorboard", marker = "extra == 'tensorboard'", specifier = ">=2.10.0" },
     { name = "torch", marker = "sys_platform != 'darwin'", specifier = ">=2.0" },
     { name = "torch", marker = "sys_platform == 'darwin'", specifier = ">=2.0,<2.2" },
     { name = "tqdm", specifier = ">=4.67.1" },
 ]
-provides-extras = ["test", "dev"]
+provides-extras = ["tensorboard", "test", "dev", "all"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.4.1" }]
 
 [[package]]
 name = "mpmath"

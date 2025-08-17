@@ -114,8 +114,14 @@ class ArgumentParser:
             "--output-layer",
             type=str,
             default="full_softmax",
-            choices=["full_softmax", "hierarchical_softmax"],
-            help="Output layer type (full_softmax or hierarchical_softmax)",
+            choices=["full_softmax", "hierarchical_softmax", "negative_sampling"],
+            help="Output layer type (full_softmax, hierarchical_softmax, or negative_sampling)",
+        )
+        model_group.add_argument(
+            "--num-negative",
+            type=int,
+            default=5,
+            help="Number of negative samples per positive example (for negative sampling)",
         )
         model_group.add_argument(
             "--vocab-size",

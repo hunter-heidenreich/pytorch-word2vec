@@ -21,7 +21,7 @@ ModelType = Literal["skipgram", "cbow"]
 TokenizerType = Literal["basic", "enhanced", "simple", "split"]
 OptimizerType = Literal["adam", "sgd"]
 DeviceType = Literal["cuda", "mps", "cpu"]
-OutputLayerType = Literal["full_softmax", "hierarchical_softmax"]
+OutputLayerType = Literal["full_softmax", "hierarchical_softmax", "negative_sampling"]
 
 
 @dataclass
@@ -73,6 +73,7 @@ class ModelConfig:
     embedding_dim: int = DEFAULT_EMBEDDING_DIM
     model_type: ModelType = "skipgram"
     output_layer: OutputLayerType = "full_softmax"
+    num_negative: int = 5  # Number of negative samples (for negative sampling)
 
 
 # Contraction mappings for enhanced tokenization

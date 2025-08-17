@@ -9,6 +9,10 @@ from modern_word2vec.hierarchical_softmax import (
     HierarchicalSoftmax,
     build_word_counts_from_dataset,
 )
+from modern_word2vec.negative_sampling import (
+    NegativeSampling,
+    build_word_counts_from_dataset as build_word_counts_negative,
+)
 
 
 class Word2VecBase(nn.Module):
@@ -20,14 +24,16 @@ class Word2VecBase(nn.Module):
         embedding_dim: int,
         output_layer_type: str = "full_softmax",
         dataset=None,
+        num_negative: int = 5,
     ):
         """Initialize base Word2Vec model.
 
         Args:
             vocab_size: Size of vocabulary
             embedding_dim: Dimension of embeddings
-            output_layer_type: Type of output layer ("full_softmax" or "hierarchical_softmax")
-            dataset: Dataset instance (required for hierarchical softmax to build tree)
+            output_layer_type: Type of output layer ("full_softmax", "hierarchical_softmax", or "negative_sampling")
+            dataset: Dataset instance (required for hierarchical softmax and negative sampling to build distributions)
+            num_negative: Number of negative samples per positive example (for negative sampling)
         """
         super().__init__()
         self.vocab_size = vocab_size
@@ -48,10 +54,24 @@ class Word2VecBase(nn.Module):
                 embedding_dim, vocab_size, word_counts, dataset.word_to_idx
             )
             self.out_embeddings = None  # Not used in hierarchical softmax
+            self.negative_sampling = None
+        elif output_layer_type == "negative_sampling":
+            if dataset is None:
+                raise ValueError(
+                    "Dataset is required for negative sampling to build noise distribution"
+                )
+
+            word_counts = build_word_counts_negative(dataset)
+            self.negative_sampling = NegativeSampling(
+                embedding_dim, vocab_size, word_counts, dataset.word_to_idx, num_negative
+            )
+            self.out_embeddings = None  # Negative sampling manages its own output embeddings
+            self.hierarchical_softmax = None
         else:
             # Standard full softmax
             self.out_embeddings = nn.Embedding(vocab_size, embedding_dim)
             self.hierarchical_softmax = None
+            self.negative_sampling = None
 
         # Initialize weights following original word2vec.c approach:
         # Input embeddings: random uniform [-0.5, 0.5] / embedding_dim
@@ -82,7 +102,9 @@ class Word2VecBase(nn.Module):
             raise ValueError(
                 "Cannot compute full scores with hierarchical softmax. Use compute_loss instead."
             )
-
+        elif self.output_layer_type == "negative_sampling":
+            return self.negative_sampling.predict_scores(input_embeddings)
+        
         return torch.matmul(input_embeddings, self.out_embeddings.weight.t())
 
     def compute_loss(
@@ -99,6 +121,8 @@ class Word2VecBase(nn.Module):
         """
         if self.output_layer_type == "hierarchical_softmax":
             return self.hierarchical_softmax(input_embeddings, targets)
+        elif self.output_layer_type == "negative_sampling":
+            return self.negative_sampling(input_embeddings, targets)
         else:
             # Standard cross-entropy loss with full softmax
             scores = self._compute_scores(input_embeddings)
@@ -117,16 +141,18 @@ class SkipGramModel(Word2VecBase):
         embedding_dim: int,
         output_layer_type: str = "full_softmax",
         dataset=None,
+        num_negative: int = 5,
     ):
         """Initialize Skip-gram model.
 
         Args:
             vocab_size: Size of vocabulary
             embedding_dim: Dimension of embeddings
-            output_layer_type: Type of output layer ("full_softmax" or "hierarchical_softmax")
-            dataset: Dataset instance (required for hierarchical softmax)
+            output_layer_type: Type of output layer ("full_softmax", "hierarchical_softmax", or "negative_sampling")
+            dataset: Dataset instance (required for hierarchical softmax and negative sampling)
+            num_negative: Number of negative samples per positive example (for negative sampling)
         """
-        super().__init__(vocab_size, embedding_dim, output_layer_type, dataset)
+        super().__init__(vocab_size, embedding_dim, output_layer_type, dataset, num_negative)
 
     def forward(
         self, target_word: torch.Tensor, context_targets: Optional[torch.Tensor] = None
@@ -150,6 +176,12 @@ class SkipGramModel(Word2VecBase):
                     "context_targets required for hierarchical softmax forward pass"
                 )
             return self.compute_loss(in_embeds, context_targets)
+        elif self.output_layer_type == "negative_sampling":
+            if context_targets is None:
+                raise ValueError(
+                    "context_targets required for negative sampling forward pass"
+                )
+            return self.compute_loss(in_embeds, context_targets)
         else:
             return self._compute_scores(in_embeds)
 
@@ -166,16 +198,18 @@ class CBOWModel(Word2VecBase):
         embedding_dim: int,
         output_layer_type: str = "full_softmax",
         dataset=None,
+        num_negative: int = 5,
     ):
         """Initialize CBOW model.
 
         Args:
             vocab_size: Size of vocabulary
             embedding_dim: Dimension of embeddings
-            output_layer_type: Type of output layer ("full_softmax" or "hierarchical_softmax")
-            dataset: Dataset instance (required for hierarchical softmax)
+            output_layer_type: Type of output layer ("full_softmax", "hierarchical_softmax", or "negative_sampling")
+            dataset: Dataset instance (required for hierarchical softmax and negative sampling)
+            num_negative: Number of negative samples per positive example (for negative sampling)
         """
-        super().__init__(vocab_size, embedding_dim, output_layer_type, dataset)
+        super().__init__(vocab_size, embedding_dim, output_layer_type, dataset, num_negative)
 
     def forward(
         self, context_words: torch.Tensor, center_targets: Optional[torch.Tensor] = None
@@ -198,6 +232,12 @@ class CBOWModel(Word2VecBase):
             if center_targets is None:
                 raise ValueError(
                     "center_targets required for hierarchical softmax forward pass"
+                )
+            return self.compute_loss(context_vector, center_targets)
+        elif self.output_layer_type == "negative_sampling":
+            if center_targets is None:
+                raise ValueError(
+                    "center_targets required for negative sampling forward pass"
                 )
             return self.compute_loss(context_vector, center_targets)
         else:

@@ -21,6 +21,12 @@ from modern_word2vec.hierarchical_softmax import (
     build_word_counts_from_dataset,
 )
 
+# Negative Sampling
+from modern_word2vec.negative_sampling import (
+    NegativeSampling,
+    NoiseSampler,
+)
+
 # Training
 from modern_word2vec.training import Trainer
 
@@ -54,6 +60,9 @@ __all__ = [
     "HierarchicalSoftmax",
     "HuffmanTree",
     "build_word_counts_from_dataset",
+    # Negative Sampling
+    "NegativeSampling",
+    "NoiseSampler",
     # Training
     "Trainer",
     # Utilities

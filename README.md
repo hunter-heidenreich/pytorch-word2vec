@@ -4,7 +4,7 @@ Modern Word2Vec (Skip-gram and CBOW) implementation with PyTorch best practices 
 
 ## Features
 
-- **Skip-gram and CBOW models** with full softmax and **hierarchical softmax** output layers
+- **Skip-gram and CBOW models** with full softmax, **hierarchical softmax**, and **negative sampling** output layers
 - **Modern PyTorch practices**: mixed precision, torch.compile, proper device handling  
 - **Configurable preprocessing**: tokenization, vocabulary building, dynamic context windows
 - **Advanced training**: subsampling, gradient clipping, streaming for large datasets
@@ -56,6 +56,12 @@ word2vec-train --model-type cbow --output-layer hierarchical_softmax \
     --vocab-size 50000 --embedding-dim 300 --epochs 5 --save
 ```
 
+**Skip-gram with negative sampling:**
+```bash
+word2vec-train --model-type skipgram --output-layer negative_sampling \
+    --num-negative 10 --vocab-size 50000 --embedding-dim 300 --save
+```
+
 **GPU-optimized training:**
 ```bash
 word2vec-train --device cuda --amp --compile --batch-size 1024 \
@@ -79,8 +85,8 @@ word2vec-train --text-file corpus.txt --model-type skipgram --save
 
 **Large vocabulary with streaming:**
 ```bash
-word2vec-train --streaming --vocab-file vocab.json --output-layer hierarchical_softmax \
-    --vocab-size 200000 --buffer-size 50000 --save
+word2vec-train --streaming --vocab-file vocab.json --output-layer negative_sampling \
+    --num-negative 15 --vocab-size 200000 --buffer-size 50000 --save
 ```
 
 **Synthetic data for testing:**
@@ -149,8 +155,10 @@ src/modern_word2vec/
 | Use Case | Model | Output Layer | Notes |
 |----------|--------|-------------|--------|
 | Small datasets | Skip-gram | Full softmax | Better for rare words |
-| Large datasets | CBOW | Hierarchical softmax | Faster training |
+| Medium datasets | CBOW | Negative sampling | Good balance of speed/quality |
+| Large datasets | CBOW | Hierarchical softmax | Fastest training |
 | Large vocab (>50k) | Either | Hierarchical softmax | O(log V) complexity |
+| Quality focus | Skip-gram | Negative sampling | Best embeddings with k=5-20 |
 
 ### Dataset Size Guidelines
 
@@ -194,7 +202,7 @@ Export to other formats or integrate with gensim - see [examples/](examples/) fo
 ## Notes
 
 - **Hierarchical softmax**: O(log V) complexity, ideal for large vocabularies (>50k words)
-- **Future work**: Negative sampling coming soon to complete classical word2vec variants
+- **Negative sampling**: O(k) complexity where k is number of negative samples, excellent quality with k=5-20
 - **Reproducibility**: All training uses deterministic seeding for consistent results
 
 ## License
